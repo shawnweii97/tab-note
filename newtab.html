@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link type="image/x-icon" href="./favicon.ico" rel="icon" />
+  <title>Tab Notes</title>
+  <script type="text/javascript" src="./browser-polyfill.min.js"></script>
+  <script type="text/javascript" src="./migration.js"></script>
+  <script type="text/javascript" src="./utils.js"></script>
+  <script src="jquery.js"></script>
+  <script type="text/javascript" src="./newtab.js"></script>
+  
+  <style>
+    .hide { display: none !important; }
+
+    body {
+      color: #343434;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+      min-width: 800px;
+      min-height: 600px;
+    }
+    #note-content {
+      box-sizing: border-box;
+      border: 0;
+      font-size: 18px;
+      line-height: 1.75rem;
+      margin: 0;
+      min-height: 100vh;
+      height: auto;
+      padding: 4rem 20%;
+      resize: none;
+      width: 100%;
+    }
+    [contentEditable=true]:empty:before{
+      content:attr(data-text);
+      color: grey;
+    }
+    #note-content.dark {
+      background: #343434;
+      color: #fff;
+    }
+    #mode-switcher {
+      border: 1px solid #777;
+      border-radius: 50%;
+      cursor: pointer;
+      height: 20px;
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      width: 20px;
+      z-index: 999;
+    }
+    #mode-switcher { background: #777; }
+    .dark + #mode-switcher { background: #fff; }
+
+    #status {
+      bottom: 12px;
+      filter: invert(100%);
+      position: fixed;
+      left: 12px;
+    }
+
+    #addon-author {
+      background: #DD4A68;
+      bottom: 12px;
+      border: 1px solid #DD4A68;
+      color: #fff;
+      font-family: serif;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px;
+      position: fixed;
+      text-decoration: none;
+      right: 12px;
+    }
+    #addon-author:hover { background: #E28699; border-color: #E28699; }
+
+    /* Multi-note */
+    #list-trigger {
+      position: fixed;
+      top: 12px;
+      left: 14px;
+      width: 16px;
+      cursor: pointer;
+    }
+    #bold-button {
+      position: fixed;
+      top: 12px;
+      left: 260px;
+      cursor: pointer;
+    }
+    #italic-button {
+      position: fixed;
+      top: 12px;
+      left: 322px;
+      cursor: pointer;
+    }
+    #underline-button {
+      position: fixed;
+      top: 12px;
+      left: 382px;
+      cursor: pointer;
+    }
+    #download-button {
+      position: fixed;
+      top: 12px;
+      left: 480px;
+      cursor: pointer;
+    }
+    #list-trigger:before,
+    #list-trigger span,
+    #list-trigger:after {
+      width: 16px;
+      height: 5px;
+      float: left;
+      content: '';
+      display: inline-block;
+      box-shadow: 0 2px 0 #343434;
+      border-bottom: 2px solid #fff;
+    }
+
+    #list {
+      box-sizing: border-box;
+      width: 250px;
+      position: absolute;
+      top: 0;
+      left: -250px;
+      bottom: 0;
+      overflow: auto;
+
+      background: #eee;
+      color: #343434;
+      box-shadow: inset -7px 0 5px -6px rgba(0,0,0,0.5);
+    }
+    #list .list-inner {
+      position: relative;
+      padding: 4rem 20px;
+    }
+
+    #create_entry {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      box-sizing: border-box;
+      width: 22px;
+      height: 22px;
+      color: #aaa;
+      background: #fff;
+      text-align: center;
+      line-height: 20px;
+      cursor: pointer;
+      border: 1px solid #aaa;
+      border-radius: 50%;
+    }
+
+    .dark #create_entry {
+      background: #343434;
+      color: #777;
+      border: 1px solid #777;
+    }
+
+    #list ul {
+      padding: 0 0 calc(20px + 1rem);
+      margin: 0;
+      list-style-type: none;
+    }
+    #list li ::selection {
+      background-color: transparent;
+    }
+    #list li > span {
+      display: block;
+      padding: 10px;
+      text-decoration: none;
+      box-sizing: border-box;
+      border-bottom: 1px solid #ddd;
+      color: #999;
+      cursor: pointer;
+      position: relative;
+    }
+    #list li span > span {
+      font-size: 1.25rem;
+      margin-right: .25rem;
+    }
+    #list li span > span.empty-string {
+      font-size: 1rem;
+      opacity: 0.5;
+      margin-right: 0;
+    }
+    #list li span .del {
+      display: none;
+      position: absolute;
+      right: 0;
+      cursor: pointer;
+      opacity: 0.5;
+      font-family: sans-serif;
+      font-size: 1.5rem;
+      box-sizing: border-box;
+      width: 22px;
+      height: 22px;
+      text-align: center;
+      line-height: 20px;
+      transform: rotate(45deg);
+    }
+    #list li:hover span .del {
+      display: inline-block;
+    }
+    #list li:hover span .del:hover {
+      opacity: 1;
+    }
+    #list .current {
+      position: relative;
+    }
+    #list .current:before {
+      content: '';
+      display: inline-block;
+      border: 2px solid;
+      position: absolute;
+      top: calc(50% - 4px);
+      left: -3px;
+      border-color: #343434;
+    }
+    #list .current > span, #list .current a:hover {
+      cursor: default;
+      color: #343434;
+    }
+    #list li > span:hover {
+      color: #666;
+    }
+    #list.dark {
+      background: #292929;
+      color: #fff;
+      box-shadow: inset -7px 0 5px -6px rgba(0,0,0,0.5);
+    }
+    #list.dark li > span {
+      border-bottom: 1px solid #343434;
+      color: #aaa;
+    }
+    #list.dark li > span:hover {
+      color: #ddd;
+    }
+    #list.dark .current:before {
+      border-color: #ddd;
+    }
+    #list.dark .current > span, #list.dark .current a:hover {
+      color: #ddd;
+    }
+
+    #list-indicator:checked ~ #list {
+      left: 0;
+    }
+    #list-indicator:checked ~ #note-content {
+      margin-left: 250px;
+      padding: 4rem 10%;
+      width: calc(100vw - 250px);
+    }
+  </style>
+</head>
+<body>
+<input type="checkbox" id="list-indicator" class="hide" />
+<div id="list">
+  <div class="list-inner">
+    <ul></ul>
+    <div id="create_entry">+</div>
+  </div>
+</div>
+<label id="list-trigger" for="list-indicator">
+  <span></span>
+</label>
+<div class="row" style="margin-left: 10%">
+  <div class="col-md-5">
+    <button class="btn btn-primary" id="bold-button"><b>Bold</b></button>
+    <button class="btn btn-primary" id="italic-button"><i>Italic</i></button>
+    <button class="btn btn-primary" id="underline-button"><u>Underline</u></button>
+    <button class="btn btn-primary" id="download-button">⤓ Download</button>
+  </div>
+</div>
+
+<div id="note-content" contenteditable="true" data-text="Enter text here"></div>
+<div id="mode-switcher" data-current="day"></div>
+<span id="status"></span>
+<a id="addon-author" href="https://github.com/wildskyf">WS</a>
+</body>
+</html>
